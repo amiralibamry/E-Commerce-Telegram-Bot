@@ -1,14 +1,36 @@
-<?php
-$title = 'محصولات';
-include 'src/head.php'; ?>
+def receive_receipt(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
 
-<body dir="rtl" class="bg-gray-100 dark:bg-gray-800 rounded-2xl h-screen overflow-hidden relative font-body">
-    <div class="flex items-start justify-between">
-        <?php include 'src/nav.php'; ?>
+    if user_id not in USER_STATE:
+        return
 
-        <div class="flex flex-col w-full pl-0 md:p-4 md:space-y-4">
-            <?php include 'src/header.php'; ?>
-            <?php include 'src/products.php'; ?>
-        </div>
-    </div>
-<?php include 'src/footer.php'; ?>
+    if USER_STATE[user_id]["state"] != "waiting_receipt":
+        return
+
+    pid = USER_STATE[user_id]["product_id"]
+    product = PRODUCTS[pid]
+
+    # ارسال پیام به ادمین
+    context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=
+        f"🧾 رسید جدید\n\n"
+        f"👤 کاربر: {update.message.from_user.full_name}\n"
+        f"🆔 ID: {user_id}\n"
+        f"📦 محصول: {product['name']}\n"
+        f"💰 مبلغ: {product['price']}"
+    )
+
+    # فوروارد خود رسید
+    context.bot.forward_message(
+        chat_id=ADMIN_ID,
+        from_chat_id=update.message.chat_id,
+        message_id=update.message.message_id
+    )
+
+    update.message.reply_text(
+        "✅ رسید دریافت شد\n"
+        "پس از بررسی، سرویس برای شما فعال می‌شود 🙏"
+    )
+
+    del USER_STATE[user_id]
